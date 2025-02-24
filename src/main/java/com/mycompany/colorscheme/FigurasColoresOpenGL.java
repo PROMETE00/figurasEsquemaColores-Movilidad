@@ -285,51 +285,16 @@ imGuiGl3.init("#version 330");
             // Separador visual
             ImGui.separator();
     
-            if (selectedFigure != null) {
-                // Controles para transformaciones
-                ImGui.text("Transformaciones:");
-                float[] rotation = {selectedFigure.getRotation()};
-                if (ImGui.sliderFloat("Rotación", rotation, -360.0f, 360.0f, "%.2f", 0)) {
-                    selectedFigure.setRotation(rotation[0]);
-                }
-        
-                float[] bias = {selectedFigure.getBias()};
-                if (ImGui.sliderFloat("Sesgo (Bias)", bias, -1.0f, 1.0f, "%.2f", 0)) {
-                    selectedFigure.setBias(bias[0]);
-                }
-        
-                float[] translateX = {selectedFigure.getTranslateX()};
-                float[] translateY = {selectedFigure.getTranslateY()};
-                if (ImGui.sliderFloat("Traslación X", translateX, -1.0f, 1.0f, "%.2f", 0)) {
-                    selectedFigure.setTranslateX(translateX[0]);
-                }
-                if (ImGui.sliderFloat("Traslación Y", translateY, -1.0f, 1.0f, "%.2f", 0)) {
-                    selectedFigure.setTranslateY(translateY[0]);
-                }
-        
-                float[] scaleX = {selectedFigure.getScaleX()};
-                float[] scaleY = {selectedFigure.getScaleY()};
-                if (ImGui.sliderFloat("Escala X", scaleX, 0.1f, 2.0f, "%.2f", 0)) {
-                    selectedFigure.setScaleX(scaleX[0]);
-                }
-                if (ImGui.sliderFloat("Escala Y", scaleY, 0.1f, 2.0f, "%.2f", 0)) {
-                    selectedFigure.setScaleY(scaleY[0]);
-                }
-            }
-    
-            // Sliders para transformaciones
+            // Controles para transformaciones
+            ImGui.text("Transformaciones:");
             float[] rotation = {selectedFigure.getRotation()};
             if (ImGui.sliderFloat("Rotación", rotation, -360.0f, 360.0f, "%.2f", 0)) {
                 selectedFigure.setRotation(rotation[0]);
             }
     
-            float[] scaleX = {selectedFigure.getScaleX()};
-            float[] scaleY = {selectedFigure.getScaleY()};
-            if (ImGui.sliderFloat("Escala X", scaleX, 0.1f, 2.0f, "%.2f", 0)) {
-                selectedFigure.setScaleX(scaleX[0]);
-            }
-            if (ImGui.sliderFloat("Escala Y", scaleY, 0.1f, 2.0f, "%.2f", 0)) {
-                selectedFigure.setScaleY(scaleY[0]);
+            float[] bias = {selectedFigure.getBias()};
+            if (ImGui.sliderFloat("Sesgo (Bias)", bias, -1.0f, 1.0f, "%.2f", 0)) {
+                selectedFigure.setBias(bias[0]);
             }
     
             float[] translateX = {selectedFigure.getTranslateX()};
@@ -341,9 +306,13 @@ imGuiGl3.init("#version 330");
                 selectedFigure.setTranslateY(translateY[0]);
             }
     
-            float[] bias = {selectedFigure.getBias()};
-            if (ImGui.sliderFloat("Sesgo (Bias)", bias, -1.0f, 1.0f, "%.2f", 0)) {
-                selectedFigure.setBias(bias[0]);
+            float[] scaleX = {selectedFigure.getScaleX()};
+            float[] scaleY = {selectedFigure.getScaleY()};
+            if (ImGui.sliderFloat("Escala X", scaleX, 0.1f, 2.0f, "%.2f", 0)) {
+                selectedFigure.setScaleX(scaleX[0]);
+            }
+            if (ImGui.sliderFloat("Escala Y", scaleY, 0.1f, 2.0f, "%.2f", 0)) {
+                selectedFigure.setScaleY(scaleY[0]);
             }
         }
     
@@ -562,7 +531,26 @@ imGuiGl3.init("#version 330");
             // Aplicar transformaciones en el orden correcto
             GL30.glTranslatef(translateX, translateY, 0.0f); // Traslación final
             GL30.glTranslatef(bias, bias, 0.0f); // Sesgo
-            GL30.glRotatef(rotation, 0.0f, 0.0f, 1.0f); // Rotación
+    
+            // Rotación alrededor del centro de la figura
+            if (shape.length == 4) { // Rectángulo
+                float centerX = shape[0] + shape[2] / 2;
+                float centerY = shape[1] + shape[3] / 2;
+                GL30.glTranslatef(centerX, centerY, 0.0f); // Trasladar al centro
+                GL30.glRotatef(rotation, 0.0f, 0.0f, 1.0f); // Rotar
+                GL30.glTranslatef(-centerX, -centerY, 0.0f); // Trasladar de vuelta
+            } else if (shape.length == 3) { // Círculo
+                GL30.glTranslatef(shape[0], shape[1], 0.0f); // Trasladar al centro
+                GL30.glRotatef(rotation, 0.0f, 0.0f, 1.0f); // Rotar
+                GL30.glTranslatef(-shape[0], -shape[1], 0.0f); // Trasladar de vuelta
+            } else if (shape.length == 6) { // Triángulo
+                float centerX = (shape[0] + shape[2] + shape[4]) / 3;
+                float centerY = (shape[1] + shape[3] + shape[5]) / 3;
+                GL30.glTranslatef(centerX, centerY, 0.0f); // Trasladar al centro
+                GL30.glRotatef(rotation, 0.0f, 0.0f, 1.0f); // Rotar
+                GL30.glTranslatef(-centerX, -centerY, 0.0f); // Trasladar de vuelta
+            }
+    
             GL30.glScalef(scaleX, scaleY, 1.0f); // Escalado
     
             // Dibujar la figura basada en su forma
@@ -627,7 +615,6 @@ imGuiGl3.init("#version 330");
             this.color = color;
         }
     }
-
     private static void drawRectangle(float x, float y, float width, float height, float[] color) {
         GL30.glBegin(GL30.GL_QUADS);
         GL30.glColor3f(color[0], color[1], color[2]);
