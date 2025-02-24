@@ -118,12 +118,12 @@ public class FigurasColoresOpenGL {
         GL30.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     
         // Inicializar ImGui
-        ImGui.createContext();
-        ImGuiIO io = ImGui.getIO();
-        io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard); // Habilitar navegación con teclado
-        imGuiGlfw.init(window, true);
-        imGuiGl3.init("#version 330");
-    
+        // Inicializar ImGui
+ImGui.createContext();
+ImGuiIO io = ImGui.getIO();
+io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard); // Habilitar navegación con teclado
+imGuiGlfw.init(window, true);
+imGuiGl3.init("#version 330");
         // Crear figuras
         figures.add(new Figure("Rectángulo", new float[]{-0.8f, -0.8f, 0.4f, 0.4f}, new float[]{0.0f, 0.0f, 0.0f}));
         figures.add(new Figure("Círculo", new float[]{0.0f, 0.0f, 0.2f}, new float[]{0.0f, 0.0f, 0.0f}));
@@ -285,19 +285,36 @@ public class FigurasColoresOpenGL {
             // Separador visual
             ImGui.separator();
     
-            // Controles para transformaciones
-            ImGui.text("Transformaciones:");
-            if (ImGui.button("Rotación")) {
-                // Activar rotación
-            }
-            if (ImGui.button("Escalado")) {
-                // Activar escalado
-            }
-            if (ImGui.button("Traslación")) {
-                // Activar traslación
-            }
-            if (ImGui.button("Sesgo (Bias)")) {
-                // Activar sesgo
+            if (selectedFigure != null) {
+                // Controles para transformaciones
+                ImGui.text("Transformaciones:");
+                float[] rotation = {selectedFigure.getRotation()};
+                if (ImGui.sliderFloat("Rotación", rotation, -360.0f, 360.0f, "%.2f", 0)) {
+                    selectedFigure.setRotation(rotation[0]);
+                }
+        
+                float[] bias = {selectedFigure.getBias()};
+                if (ImGui.sliderFloat("Sesgo (Bias)", bias, -1.0f, 1.0f, "%.2f", 0)) {
+                    selectedFigure.setBias(bias[0]);
+                }
+        
+                float[] translateX = {selectedFigure.getTranslateX()};
+                float[] translateY = {selectedFigure.getTranslateY()};
+                if (ImGui.sliderFloat("Traslación X", translateX, -1.0f, 1.0f, "%.2f", 0)) {
+                    selectedFigure.setTranslateX(translateX[0]);
+                }
+                if (ImGui.sliderFloat("Traslación Y", translateY, -1.0f, 1.0f, "%.2f", 0)) {
+                    selectedFigure.setTranslateY(translateY[0]);
+                }
+        
+                float[] scaleX = {selectedFigure.getScaleX()};
+                float[] scaleY = {selectedFigure.getScaleY()};
+                if (ImGui.sliderFloat("Escala X", scaleX, 0.1f, 2.0f, "%.2f", 0)) {
+                    selectedFigure.setScaleX(scaleX[0]);
+                }
+                if (ImGui.sliderFloat("Escala Y", scaleY, 0.1f, 2.0f, "%.2f", 0)) {
+                    selectedFigure.setScaleY(scaleY[0]);
+                }
             }
     
             // Sliders para transformaciones
@@ -348,7 +365,6 @@ public class FigurasColoresOpenGL {
     
         ImGui.end();
     }
-
     // Métodos de conversión de color (simplificados)
     private float[] rgbToCmyk(float[] rgb) {
         float r = rgb[0], g = rgb[1], b = rgb[2];
@@ -506,13 +522,13 @@ public class FigurasColoresOpenGL {
         private float[] shape;
         private float[] color;
     
-        // Transformations
-        private float rotation = 0.0f; // Rotation angle in degrees
-        private float scaleX = 1.0f;   // Scaling factor for X-axis
-        private float scaleY = 1.0f;   // Scaling factor for Y-axis
-        private float translateX = 0.0f; // Translation along X-axis
-        private float translateY = 0.0f; // Translation along Y-axis
-        private float bias = 0.0f;      // Bias (offset) for the figure
+        // Transformaciones
+        private float rotation = 0.0f; // Ángulo de rotación en grados
+        private float scaleX = 1.0f;   // Factor de escalado en X
+        private float scaleY = 1.0f;   // Factor de escalado en Y
+        private float translateX = 0.0f; // Traslación en X
+        private float translateY = 0.0f; // Traslación en Y
+        private float bias = 0.0f;      // Sesgo (offset)
     
         public Figure(String name, float[] shape, float[] color) {
             this.name = name;
@@ -520,7 +536,7 @@ public class FigurasColoresOpenGL {
             this.color = color;
         }
     
-        // Getters and setters for transformations
+        // Getters y setters para las transformaciones
         public float getRotation() { return rotation; }
         public void setRotation(float rotation) { this.rotation = rotation; }
     
@@ -539,31 +555,17 @@ public class FigurasColoresOpenGL {
         public float getBias() { return bias; }
         public void setBias(float bias) { this.bias = bias; }
     
-        // Draw the figure with transformations
+        // Dibujar la figura con transformaciones
         public void draw() {
-            GL30.glPushMatrix(); // Save the current transformation matrix
+            GL30.glPushMatrix(); // Guardar la matriz actual
     
-            // Apply transformations in the correct order
-            GL30.glTranslatef(translateX, translateY, 0.0f); // Translation
+            // Aplicar transformaciones en el orden correcto
+            GL30.glTranslatef(translateX, translateY, 0.0f); // Traslación final
+            GL30.glTranslatef(bias, bias, 0.0f); // Sesgo
+            GL30.glRotatef(rotation, 0.0f, 0.0f, 1.0f); // Rotación
+            GL30.glScalef(scaleX, scaleY, 1.0f); // Escalado
     
-            // Apply bias (additional translation)
-            if (Math.abs(bias) <= 1.0f) { // Ensure bias is within a valid range
-                GL30.glTranslatef(bias, bias, 0.0f);
-            } else {
-                System.err.println("Invalid bias value: " + bias);
-            }
-    
-            // Apply rotation
-            if (rotation >= -360.0f && rotation <= 360.0f) { // Ensure rotation is within a valid range
-                GL30.glRotatef(rotation, 0.0f, 0.0f, 1.0f);
-            } else {
-                System.err.println("Invalid rotation value: " + rotation);
-            }
-    
-            // Apply scaling
-            GL30.glScalef(scaleX, scaleY, 1.0f); // Scaling
-    
-            // Draw the figure based on its shape
+            // Dibujar la figura basada en su forma
             if (shape.length == 4) { // Rectángulo
                 drawRectangle(shape[0], shape[1], shape[2], shape[3], color);
             } else if (shape.length == 3) { // Círculo
@@ -572,16 +574,16 @@ public class FigurasColoresOpenGL {
                 drawTriangle(shape[0], shape[1], shape[2], shape[3], shape[4], shape[5], color);
             }
     
-            GL30.glPopMatrix(); // Restore the original transformation matrix
+            GL30.glPopMatrix(); // Restaurar la matriz original
     
-            // Check for OpenGL errors
+            // Verificar errores de OpenGL
             int error = GL30.glGetError();
             if (error != GL30.GL_NO_ERROR) {
                 System.err.println("OpenGL Error: " + error);
             }
         }
     
-        // Other methods (drawBorder, contains, getColor, setColor) remain unchanged
+        // Métodos para dibujar el borde y verificar si contiene un punto
         public void drawBorder() {
             float[] borderColor = {1.0f, 0.0f, 0.0f}; // Borde rojo
             if (shape.length == 4) { // Rectángulo
