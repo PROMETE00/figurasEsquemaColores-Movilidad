@@ -125,10 +125,37 @@ io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard); // Habilitar navegación 
 imGuiGlfw.init(window, true);
 imGuiGl3.init("#version 330");
         // Crear figuras
-        figures.add(new Figure("Rectángulo", new float[]{-0.8f, -0.8f, 0.4f, 0.4f}, new float[]{0.0f, 0.0f, 0.0f}));
-        figures.add(new Figure("Círculo", new float[]{0.0f, 0.0f, 0.2f}, new float[]{0.0f, 0.0f, 0.0f}));
-        figures.add(new Figure("Triángulo", new float[]{0.4f, -0.8f, 0.4f, -0.4f, 0.8f, -0.8f}, new float[]{0.0f, 0.0f, 0.0f}));
+        
+            // Inicializar GLFW y crear la ventana (código existente)
+        
+            // Crear figuras
+            figures.add(new Figure("Rectángulo", new float[]{-0.8f, -0.8f, 0.4f, 0.4f}, new float[]{0.0f, 0.0f, 0.0f}));
+            figures.add(new Figure("Círculo", new float[]{0.0f, 0.0f, 0.2f}, new float[]{0.0f, 0.0f, 0.0f}));
+            figures.add(new Figure("Triángulo", new float[]{0.4f, -0.8f, 0.4f, -0.4f, 0.8f, -0.8f}, new float[]{0.0f, 0.0f, 0.0f}));
+        
+           // Pentágono (5 vértices)
+    float[] pentagonVertices = new float[10];
+    float pentagonRadius = 0.2f;
+    float pentagonCenterX = -0.5f; // Mover el pentágono a la izquierda
+    float pentagonCenterY = 0.5f;  // Mover el pentágono hacia arriba
+    for (int i = 0; i < 5; i++) {
+        double angle = 2 * Math.PI * i / 5;
+        pentagonVertices[2 * i] = pentagonCenterX + (float) (Math.cos(angle) * pentagonRadius);
+        pentagonVertices[2 * i + 1] = pentagonCenterY + (float) (Math.sin(angle) * pentagonRadius);
     }
+    figures.add(new Figure("Pentágono", pentagonVertices, new float[]{0.0f, 0.0f, 0.0f}));
+
+    // Hexágono (6 vértices)
+    float[] hexagonVertices = new float[12];
+    float hexagonRadius = 0.2f;
+    float hexagonCenterX = 0.5f; // Mover el hexágono a la derecha
+    float hexagonCenterY = 0.5f; // Mover el hexágono hacia arriba
+    for (int i = 0; i < 6; i++) {
+        double angle = 2 * Math.PI * i / 6;
+        hexagonVertices[2 * i] = hexagonCenterX + (float) (Math.cos(angle) * hexagonRadius);
+        hexagonVertices[2 * i + 1] = hexagonCenterY + (float) (Math.sin(angle) * hexagonRadius);
+    }
+    figures.add(new Figure("Hexágono", hexagonVertices, new float[]{0.0f, 0.0f, 0.0f}));}
 
     private void loop() {
         // Bucle principal
@@ -174,7 +201,7 @@ imGuiGl3.init("#version 330");
 
     private void drawImGui() {
         // Crear una ventana de ImGui más alargada
-        ImGui.setNextWindowSize(600, 400); // Ajustar el tamaño de la ventana
+        ImGui.setNextWindowSize(600, 900); // Ajustar el tamaño de la ventana
         ImGui.begin("Paleta de colores y perfiles");
     
         // Mostrar la paleta de colores RGB solo si hay una figura seleccionada
@@ -292,11 +319,14 @@ imGuiGl3.init("#version 330");
                 selectedFigure.setRotation(rotation[0]);
             }
     
-            float[] bias = {selectedFigure.getBias()};
-            if (ImGui.sliderFloat("Sesgo (Bias)", bias, -1.0f, 1.0f, "%.2f", 0)) {
-                selectedFigure.setBias(bias[0]);
+            float[] biasX = {selectedFigure.getBiasX()};
+            float[] biasY = {selectedFigure.getBiasY()};
+            if (ImGui.sliderFloat("Sesgado X", biasX, -1.0f, 1.0f, "%.2f", 0)) {
+                selectedFigure.setBiasX(biasX[0]);
             }
-    
+            if (ImGui.sliderFloat("Sesgado Y", biasY, -1.0f, 1.0f, "%.2f", 0)) {
+                selectedFigure.setBiasY(biasY[0]);
+            }
             float[] translateX = {selectedFigure.getTranslateX()};
             float[] translateY = {selectedFigure.getTranslateY()};
             if (ImGui.sliderFloat("Traslación X", translateX, -1.0f, 1.0f, "%.2f", 0)) {
@@ -497,7 +527,8 @@ imGuiGl3.init("#version 330");
         private float scaleY = 1.0f;   // Factor de escalado en Y
         private float translateX = 0.0f; // Traslación en X
         private float translateY = 0.0f; // Traslación en Y
-        private float bias = 0.0f;      // Sesgo (offset)
+        private float biasX = 0.0f; // Sesgado en X
+        private float biasY = 0.0f; // Sesgado en Y  
     
         public Figure(String name, float[] shape, float[] color) {
             this.name = name;
@@ -521,38 +552,74 @@ imGuiGl3.init("#version 330");
         public float getTranslateY() { return translateY; }
         public void setTranslateY(float translateY) { this.translateY = translateY; }
     
-        public float getBias() { return bias; }
-        public void setBias(float bias) { this.bias = bias; }
+        public float getBiasX() { return biasX; }
+        public void setBiasX(float biasX) { this.biasX = biasX; }
+        
+        public float getBiasY() { return biasY; }
+        public void setBiasY(float biasY) { this.biasY = biasY; }
+
+        private void applyCustomSkew(float biasX, float biasY) {
+            // Factor de escala para reducir la sensibilidad del sesgado
+            float scaleFactor = 0.1f; // Puedes ajustar este valor según sea necesario
+        
+            // Aplicar sesgado en X
+            if (biasX != 0) {
+                for (int i = 0; i < shape.length; i += 2) {
+                    shape[i] += (biasX * scaleFactor) * shape[i + 1]; // Mover en X en función de Y
+                }
+            }
+        
+            // Aplicar sesgado en Y
+            if (biasY != 0) {
+                for (int i = 1; i < shape.length; i += 2) {
+                    shape[i] += (biasY * scaleFactor) * shape[i - 1]; // Mover en Y en función de X
+                }
+            }
+        }
     
-        // Dibujar la figura con transformaciones
         public void draw() {
             GL30.glPushMatrix(); // Guardar la matriz actual
-    
+        
             // Aplicar transformaciones en el orden correcto
             GL30.glTranslatef(translateX, translateY, 0.0f); // Traslación final
-            GL30.glTranslatef(bias, bias, 0.0f); // Sesgo
-    
-            // Rotación alrededor del centro de la figura
+        
+            // Aplicar sesgado personalizado
+            applyCustomSkew(biasX, biasY);
+        
+            // Calcular el centroide y aplicar la rotación
+            float centerX = 0.0f, centerY = 0.0f;
             if (shape.length == 4) { // Rectángulo
-                float centerX = shape[0] + shape[2] / 2;
-                float centerY = shape[1] + shape[3] / 2;
-                GL30.glTranslatef(centerX, centerY, 0.0f); // Trasladar al centro
-                GL30.glRotatef(rotation, 0.0f, 0.0f, 1.0f); // Rotar
-                GL30.glTranslatef(-centerX, -centerY, 0.0f); // Trasladar de vuelta
+                centerX = shape[0] + shape[2] / 2;
+                centerY = shape[1] + shape[3] / 2;
             } else if (shape.length == 3) { // Círculo
-                GL30.glTranslatef(shape[0], shape[1], 0.0f); // Trasladar al centro
-                GL30.glRotatef(rotation, 0.0f, 0.0f, 1.0f); // Rotar
-                GL30.glTranslatef(-shape[0], -shape[1], 0.0f); // Trasladar de vuelta
+                centerX = shape[0];
+                centerY = shape[1];
             } else if (shape.length == 6) { // Triángulo
-                float centerX = (shape[0] + shape[2] + shape[4]) / 3;
-                float centerY = (shape[1] + shape[3] + shape[5]) / 3;
-                GL30.glTranslatef(centerX, centerY, 0.0f); // Trasladar al centro
-                GL30.glRotatef(rotation, 0.0f, 0.0f, 1.0f); // Rotar
-                GL30.glTranslatef(-centerX, -centerY, 0.0f); // Trasladar de vuelta
+                centerX = (shape[0] + shape[2] + shape[4]) / 3;
+                centerY = (shape[1] + shape[3] + shape[5]) / 3;
+            } else if (shape.length == 10) { // Pentágono
+                for (int i = 0; i < 5; i++) {
+                    centerX += shape[2 * i];
+                    centerY += shape[2 * i + 1];
+                }
+                centerX /= 5;
+                centerY /= 5;
+            } else if (shape.length == 12) { // Hexágono
+                for (int i = 0; i < 6; i++) {
+                    centerX += shape[2 * i];
+                    centerY += shape[2 * i + 1];
+                }
+                centerX /= 6;
+                centerY /= 6;
             }
-    
+        
+            // Aplicar rotación alrededor del centroide
+            GL30.glTranslatef(centerX, centerY, 0.0f); // Trasladar al centroide
+            GL30.glRotatef(rotation, 0.0f, 0.0f, 1.0f); // Rotar
+            GL30.glTranslatef(-centerX, -centerY, 0.0f); // Trasladar de vuelta
+        
             GL30.glScalef(scaleX, scaleY, 1.0f); // Escalado
-    
+        
             // Dibujar la figura basada en su forma
             if (shape.length == 4) { // Rectángulo
                 drawRectangle(shape[0], shape[1], shape[2], shape[3], color);
@@ -560,15 +627,54 @@ imGuiGl3.init("#version 330");
                 drawCircle(shape[0], shape[1], shape[2], color);
             } else if (shape.length == 6) { // Triángulo
                 drawTriangle(shape[0], shape[1], shape[2], shape[3], shape[4], shape[5], color);
+            } else if (shape.length == 10) { // Pentágono
+                drawPolygon(shape, color, 5); // Dibujar pentágono
+            } else if (shape.length == 12) { // Hexágono
+                drawPolygon(shape, color, 6); // Dibujar hexágono
             }
-    
+        
             GL30.glPopMatrix(); // Restaurar la matriz original
-    
+        
             // Verificar errores de OpenGL
             int error = GL30.glGetError();
             if (error != GL30.GL_NO_ERROR) {
                 System.err.println("OpenGL Error: " + error);
             }
+        }
+        
+        private void applyBias(float biasX, float biasY) {
+            // Matriz de sesgado (skew) en X e Y
+            float[] skewMatrix = {
+                1.0f, biasY, 0.0f, 0.0f, // Sesgado en Y (afecta a X)
+                biasX, 1.0f, 0.0f, 0.0f, // Sesgado en X (afecta a Y)
+                0.0f, 0.0f, 1.0f, 0.0f,
+                0.0f, 0.0f, 0.0f, 1.0f
+            };
+        
+            // Aplicar la matriz de sesgado
+            GL30.glMultMatrixf(skewMatrix);
+        }
+        
+        private void applyBias(float bias) {
+            // Matriz de sesgado (skew) en el eje X
+            float[] skewMatrix = {
+                1.0f, bias, 0.0f, 0.0f,
+                0.0f, 1.0f, 0.0f, 0.0f,
+                0.0f, 0.0f, 1.0f, 0.0f,
+                0.0f, 0.0f, 0.0f, 1.0f
+            };
+        
+            // Aplicar la matriz de sesgado
+            GL30.glMultMatrixf(skewMatrix);
+        }
+
+        private static void drawPolygon(float[] vertices, float[] color, int sides) {
+            GL30.glBegin(GL30.GL_POLYGON);
+            GL30.glColor3f(color[0], color[1], color[2]);
+            for (int i = 0; i < sides; i++) {
+                GL30.glVertex2f(vertices[2 * i], vertices[2 * i + 1]);
+            }
+            GL30.glEnd();
         }
     
         // Métodos para dibujar el borde y verificar si contiene un punto
@@ -595,14 +701,27 @@ imGuiGl3.init("#version 330");
                 float x1 = shape[0], y1 = shape[1];
                 float x2 = shape[2], y2 = shape[3];
                 float x3 = shape[4], y3 = shape[5];
-    
+        
                 float areaTotal = Math.abs((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1)) / 2.0f;
                 float area1 = Math.abs((x1 - x) * (y2 - y) - (x2 - x) * (y1 - y)) / 2.0f;
                 float area2 = Math.abs((x2 - x) * (y3 - y) - (x3 - x) * (y2 - y)) / 2.0f;
                 float area3 = Math.abs((x3 - x) * (y1 - y) - (x1 - x) * (y3 - y)) / 2.0f;
-    
+        
                 float areaSum = area1 + area2 + area3;
                 return Math.abs(areaSum - areaTotal) < 0.0001f; // Tolerancia para errores de precisión
+            } else if (shape.length == 10 || shape.length == 12) { // Pentágono o Hexágono
+                // Usar un algoritmo de punto en polígono (por ejemplo, ray casting)
+                int intersectCount = 0;
+                for (int i = 0, j = shape.length / 2 - 1; i < shape.length / 2; j = i++) {
+                    float xi = shape[2 * i], yi = shape[2 * i + 1];
+                    float xj = shape[2 * j], yj = shape[2 * j + 1];
+        
+                    if (((yi > y) != (yj > y)) &&
+                        (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+                        intersectCount++;
+                    }
+                }
+                return (intersectCount % 2) == 1;
             }
             return false;
         }
@@ -674,5 +793,7 @@ imGuiGl3.init("#version 330");
         GL30.glVertex2f(x2, y2);
         GL30.glVertex2f(x3, y3);
         GL30.glEnd();
+
     }
+    
 }
