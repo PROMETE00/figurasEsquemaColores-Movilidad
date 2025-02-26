@@ -559,66 +559,85 @@ imGuiGl3.init("#version 330");
         public void setBiasY(float biasY) { this.biasY = biasY; }
 
         private void applyCustomSkew(float biasX, float biasY) {
-            // Factor de escala para reducir la sensibilidad del sesgado
-            float scaleFactor = 0.1f; // Puedes ajustar este valor según sea necesario
+            // Identificar los vértices de la cara que se anclará
+            float anchorX1 = 0.0f, anchorY1 = 0.0f;
+            float anchorX2 = 0.0f, anchorY2 = 0.0f;
         
-            // Aplicar sesgado en X
-            if (biasX != 0) {
-                for (int i = 0; i < shape.length; i += 2) {
-                    shape[i] += (biasX * scaleFactor) * shape[i + 1]; // Mover en X en función de Y
-                }
+            if (shape.length == 4) { // Rectángulo
+                // Anclar el borde izquierdo (x, y) a (x, y + height)
+                anchorX1 = shape[0];
+                anchorY1 = shape[1];
+                anchorX2 = shape[0];
+                anchorY2 = shape[1] + shape[3];
+            } else if (shape.length == 6) { // Triángulo
+                // Anclar el borde izquierdo (primer vértice) al segundo vértice
+                anchorX1 = shape[0];
+                anchorY1 = shape[1];
+                anchorX2 = shape[2];
+                anchorY2 = shape[3];
+            } else if (shape.length == 12) { // Hexágono
+                // Anclar el primer borde superior (vértices 0 y 1)
+                anchorX1 = shape[0];
+                anchorY1 = shape[1];
+                anchorX2 = shape[2];
+                anchorY2 = shape[3];
+            } else if (shape.length == 10) { // Pentágono
+                // Anclar el primer borde superior (vértices 0 y 1)
+                anchorX1 = shape[0];
+                anchorY1 = shape[1];
+                anchorX2 = shape[2];
+                anchorY2 = shape[3];
             }
         
-            // Aplicar sesgado en Y
-            if (biasY != 0) {
-                for (int i = 1; i < shape.length; i += 2) {
-                    shape[i] += (biasY * scaleFactor) * shape[i - 1]; // Mover en Y en función de X
-                }
+            // Calcular el punto medio del borde anclado
+            float anchorMidX = (anchorX1 + anchorX2) / 2;
+            float anchorMidY = (anchorY1 + anchorY2) / 2;
+        
+            // Aplicar transformaciones relativas al borde anclado
+            GL30.glTranslatef(anchorMidX, anchorMidY, 0.0f); // Mover al punto medio del borde anclado
+        
+            // Matriz de sesgado (skew)
+            float[] skewMatrix = {
+                1.0f, biasY, 0.0f, 0.0f, // Sesgado en Y (afecta a X)
+                biasX, 1.0f, 0.0f, 0.0f, // Sesgado en X (afecta a Y)
+                0.0f, 0.0f, 1.0f, 0.0f,
+                0.0f, 0.0f, 0.0f, 1.0f
+            };
+        
+            // Multiplicar la matriz de sesgado con la matriz actual
+            GL30.glMultMatrixf(skewMatrix);
+        
+            // Restaurar la posición original
+            GL30.glTranslatef(-anchorMidX, -anchorMidY, 0.0f);
+        }
+
+        private float[] calculateCentroid() {
+            float cx = 0.0f, cy = 0.0f;
+            int points = shape.length / 2;
+            for (int i = 0; i < points; i++) {
+                cx += shape[2 * i];
+                cy += shape[2 * i + 1];
             }
+            return new float[]{cx / points, cy / points};
         }
     
         public void draw() {
             GL30.glPushMatrix(); // Guardar la matriz actual
         
-            // Aplicar transformaciones en el orden correcto
-            GL30.glTranslatef(translateX, translateY, 0.0f); // Traslación final
+            // 1. Escalado
+            GL30.glScalef(scaleX, scaleY, 1.0f);
         
-            // Aplicar sesgado personalizado
+            // 2. Rotación alrededor del centroide
+            float[] centroid = calculateCentroid(); // Calcular el centroide de la figura
+            GL30.glTranslatef(centroid[0], centroid[1], 0.0f); // Trasladar al centroide
+            GL30.glRotatef(rotation, 0.0f, 0.0f, 1.0f); // Rotar
+            GL30.glTranslatef(-centroid[0], -centroid[1], 0.0f); // Trasladar de vuelta
+        
+            // 3. Sesgado (relativo al borde anclado)
             applyCustomSkew(biasX, biasY);
         
-            // Calcular el centroide y aplicar la rotación
-            float centerX = 0.0f, centerY = 0.0f;
-            if (shape.length == 4) { // Rectángulo
-                centerX = shape[0] + shape[2] / 2;
-                centerY = shape[1] + shape[3] / 2;
-            } else if (shape.length == 3) { // Círculo
-                centerX = shape[0];
-                centerY = shape[1];
-            } else if (shape.length == 6) { // Triángulo
-                centerX = (shape[0] + shape[2] + shape[4]) / 3;
-                centerY = (shape[1] + shape[3] + shape[5]) / 3;
-            } else if (shape.length == 10) { // Pentágono
-                for (int i = 0; i < 5; i++) {
-                    centerX += shape[2 * i];
-                    centerY += shape[2 * i + 1];
-                }
-                centerX /= 5;
-                centerY /= 5;
-            } else if (shape.length == 12) { // Hexágono
-                for (int i = 0; i < 6; i++) {
-                    centerX += shape[2 * i];
-                    centerY += shape[2 * i + 1];
-                }
-                centerX /= 6;
-                centerY /= 6;
-            }
-        
-            // Aplicar rotación alrededor del centroide
-            GL30.glTranslatef(centerX, centerY, 0.0f); // Trasladar al centroide
-            GL30.glRotatef(rotation, 0.0f, 0.0f, 1.0f); // Rotar
-            GL30.glTranslatef(-centerX, -centerY, 0.0f); // Trasladar de vuelta
-        
-            GL30.glScalef(scaleX, scaleY, 1.0f); // Escalado
+            // 4. Traslación final
+            GL30.glTranslatef(translateX, translateY, 0.0f);
         
             // Dibujar la figura basada en su forma
             if (shape.length == 4) { // Rectángulo
@@ -641,7 +660,7 @@ imGuiGl3.init("#version 330");
                 System.err.println("OpenGL Error: " + error);
             }
         }
-        
+
         private void applyBias(float biasX, float biasY) {
             // Matriz de sesgado (skew) en X e Y
             float[] skewMatrix = {
